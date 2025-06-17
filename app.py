@@ -31,10 +31,13 @@ def evaluate_with_openai(prompt):
         return "[OpenAI API key not configured]"
     openai.api_key = os.getenv("OPENAI_API_KEY")
     try:
-        response = openai.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You analyze if an idea could be profitable."},
+                {
+                    "role": "system",
+                    "content": "You analyze if an idea could be profitable.",
+                },
                 {"role": "user", "content": prompt},
             ],
             max_tokens=100,
