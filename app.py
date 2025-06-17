@@ -11,19 +11,16 @@ except ImportError:  # pragma: no cover
 app = Flask(__name__)
 
 def google_search(query, num=5):
-    """Return a list of search result snippets from Google."""
-    url = "https://www.google.com/search"
-    params = {"q": query, "num": num, "hl": "en"}
+    """Return a list of search result snippets using DuckDuckGo."""
+    url = "https://duckduckgo.com/html/"
+    params = {"q": query}
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, params=params, headers=headers, timeout=10)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
     results = []
-    for g in soup.select("div.g"):
-        title = g.select_one("h3")
-        snippet = g.select_one("span.aCOpRe")
-        if title and snippet:
-            results.append(snippet.text.strip())
+    for a in soup.select("a.result__a"):
+        results.append(a.get_text(" ", strip=True))
         if len(results) >= num:
             break
     return results
@@ -33,15 +30,18 @@ def evaluate_with_openai(prompt):
     if openai is None or not os.getenv("OPENAI_API_KEY"):
         return "[OpenAI API key not configured]"
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You analyze if an idea could be profitable."},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=100,
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You analyze if an idea could be profitable."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=100,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as exc:  # pragma: no cover - network failures
+        return f"[OpenAI error: {exc}]"
 
 @app.route("/")
 def index():
